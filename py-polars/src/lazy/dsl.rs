@@ -890,16 +890,6 @@ impl PyExpr {
     pub fn dot(&self, other: PyExpr) -> PyExpr {
         self.inner.clone().dot(other.inner).into()
     }
-    pub fn hash(&self, k0: u64, k1: u64, k2: u64, k3: u64) -> PyExpr {
-        let function = move |s: Series| {
-            let hb = ahash::RandomState::with_seeds(k0, k1, k2, k3);
-            Ok(s.hash(hb).into_series())
-        };
-        self.clone()
-            .inner
-            .map(function, GetOutput::from_type(DataType::UInt64))
-            .into()
-    }
 
     pub fn reinterpret(&self, signed: bool) -> PyExpr {
         let function = move |s: Series| reinterpret(&s, signed);
@@ -1185,6 +1175,13 @@ impl PyExpr {
         self.inner.clone().arr().eval(expr.inner, parallel).into()
     }
 
+    fn cumulative_eval(&self, expr: PyExpr, min_periods: usize, parallel: bool) -> Self {
+        self.inner
+            .clone()
+            .cumulative_eval(expr.inner, min_periods, parallel)
+            .into()
+    }
+
     fn lst_to_struct(&self, width_strat: &str, name_gen: Option<PyObject>) -> PyResult<Self> {
         let n_fields = match width_strat {
             "first_non_null" => ListToStructWidthStrategy::FirstNonNull,
@@ -1368,8 +1365,11 @@ impl PyExpr {
         self.inner.clone().log(base).into()
     }
 
-    pub fn entropy(&self, base: f64) -> Self {
-        self.inner.clone().entropy(base).into()
+    pub fn entropy(&self, base: f64, normalize: bool) -> Self {
+        self.inner.clone().entropy(base, normalize).into()
+    }
+    pub fn hash(&self, seed: usize) -> Self {
+        self.inner.clone().hash(seed).into()
     }
 }
 
